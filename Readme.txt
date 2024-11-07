@@ -1,5 +1,19 @@
 RaspiWiFi
 
+Shamelessly stollen from jasbur. This is a minimalist version of RaspiWifi for
+nmcli for Rasbian Bookworm. No longer requires reboots.
+
+Tested with Raspberry Pi 4, Clean 32-bit Desktop Raspbian Bookworm
+WPA activated + password. No SSL. Have not tested anthing else. Have not updated
+the webpages (they still say rebooting, even if it's not true).
+
+Sets wifi-hotspot to prio -999 and autoconnect, so it should always fall back
+if it doesn't find another network without needing the connection monitor. You
+can manually select AP Mode as the last option in the drop-down list and it
+will activate it.
+
+Here is the readme from jasbur:
+
 RaspiWiFi is a program to headlessly configure a Raspberry Pi's WiFi
 connection using using any other WiFi-enabled device (much like the way
 a Chromecast or similar device can be configured).

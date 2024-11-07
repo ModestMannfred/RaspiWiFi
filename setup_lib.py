@@ -1,50 +1,57 @@
 import os
 
 def install_prereqs():
-	os.system('clear')
 	os.system('apt update')
-	os.system('clear')
-	os.system('apt install python3 python3-rpi.gpio python3-pip dnsmasq hostapd -y')
-	os.system('clear')
-	print("Installing Flask web server...")
-	print()
-	os.system('pip3 install flask pyopenssl')
-	os.system('clear')
+	os.system('apt install python3 python3-rpi.gpio python3-pip python3-flask -y')
+#	print("Installing Flask web server...")
+#	print()
+#	os.system('pip3 install flask pyopenssl')
 
-def copy_configs(wpa_enabled_choice):
-	os.system('mkdir /usr/lib/raspiwifi')
-	os.system('mkdir /etc/raspiwifi')
+def configure_ap(entered_ssid, wpa_enabled_choice, wpa_entered_key):
+	os.system('mkdir -p /usr/lib/raspiwifi')
+	os.system('mkdir -p /etc/raspiwifi')
 	os.system('cp -a libs/* /usr/lib/raspiwifi/')
-	os.system('mv /etc/wpa_supplicant/wpa_supplicant.conf /etc/wpa_supplicant/wpa_supplicant.conf.original')
-	os.system('rm -f ./tmp/*')
-	os.system('mv /etc/dnsmasq.conf /etc/dnsmasq.conf.original')
-	os.system('cp /usr/lib/raspiwifi/reset_device/static_files/dnsmasq.conf /etc/')
+# TODO(kem): add localization de?
+
+	# Disable and deactive dnsmasq (probably disable is sufficient due to restart)
+#	os.system('systemctl is-enabled --quiet dnsmasq && systemctl disable dnsmasq')
+#	os.system('systemctl is-active --quiet dnsmasq && systemctl stop sndmasq')
+
+	os.system('nmcli con add type wifi ifname wlan0 mode ap con-name wifi-hotspot ssid ' + entered_ssid + ' autoconnect true')
+# TODO(kem): where is this stuff set?
+#	os.system('mv /etc/dnsmasq.conf /etc/dnsmasq.conf.original')
+#	os.system('cp /usr/lib/raspiwifi/reset_device/static_files/dnsmasq.conf /etc/')
+# TODO(kem): missing, driver=n180211, wpa=2
+# TODO(kem): extra, band=bg, group=ccmp
+# TODO(kem): missing, dhcp-range=10.0.0.10,10.0.0.15,12h
+#			dhcp-mac=...
+#			dhcp-reply-delay=...
+#			address=/raspiwifisetup.com/10.0.0.1
+#			address=/idliketoconfigurethewifionthisdevicenowplease.com/10.0.0.1 
+
+	os.system('nmcli con modify wifi-hotspot connection.autoconnect-priority -999')
+	os.system('nmcli con modify wifi-hotspot wifi.band bg')
+	os.system('nmcli con modify wifi-hotspot wifi.channel 1')
 
 	if wpa_enabled_choice.lower() == "y":
-		os.system('cp /usr/lib/raspiwifi/reset_device/static_files/hostapd.conf.wpa /etc/hostapd/hostapd.conf')
-	else:
-		os.system('cp /usr/lib/raspiwifi/reset_device/static_files/hostapd.conf.nowpa /etc/hostapd/hostapd.conf')
+		os.system('nmcli con modify wifi-hotspot wifi-sec.key-mgmt wpa-psk')
+		os.system('nmcli con modify wifi-hotspot wifi-sec.auth-alg open')
+		os.system('nmcli con modify wifi-hotspot wifi-sec.proto rsn')
+		os.system('nmcli con modify wifi-hotspot wifi-sec.group ccmp')
+		os.system('nmcli con modify wifi-hotspot wifi-sec.pairwise ccmp')
+		os.system('nmcli con modify wifi-hotspot wifi-sec.psk "' + wpa_entered_key + '"')
 	
-	os.system('mv /etc/dhcpcd.conf /etc/dhcpcd.conf.original')
-	os.system('cp /usr/lib/raspiwifi/reset_device/static_files/dhcpcd.conf /etc/')
+	os.system('nmcli con modify wifi-hotspot ipv4.method shared ipv4.address 10.0.0.1/24')
+	os.system('nmcli con modify wifi-hotspot ipv6.method disabled')
+
 	os.system('mkdir /etc/cron.raspiwifi')
-	os.system('cp /usr/lib/raspiwifi/reset_device/static_files/aphost_bootstrapper /etc/cron.raspiwifi')
-	os.system('chmod +x /etc/cron.raspiwifi/aphost_bootstrapper')
+	os.system('cp /usr/lib/raspiwifi/reset_device/static_files/ap_bootstrapper /etc/cron.raspiwifi')
+	os.system('chmod +x /etc/cron.raspiwifi/ap_bootstrapper')
 	os.system('echo "# RaspiWiFi Startup" >> /etc/crontab')
 	os.system('echo "@reboot root run-parts /etc/cron.raspiwifi/" >> /etc/crontab')
 	os.system('mv /usr/lib/raspiwifi/reset_device/static_files/raspiwifi.conf /etc/raspiwifi')
-	os.system('touch /etc/raspiwifi/host_mode')
 
-def update_main_config_file(entered_ssid, auto_config_choice, auto_config_delay, ssl_enabled_choice, server_port_choice, wpa_enabled_choice, wpa_entered_key):
-	if entered_ssid != "":
-		os.system('sed -i \'s/RaspiWiFi Setup/' + entered_ssid + '/\' /etc/raspiwifi/raspiwifi.conf')
-	if wpa_enabled_choice.lower() == "y":
-		os.system('sed -i \'s/wpa_enabled=0/wpa_enabled=1/\' /etc/raspiwifi/raspiwifi.conf')
-		os.system('sed -i \'s/wpa_key=0/wpa_key=' + wpa_entered_key + '/\' /etc/raspiwifi/raspiwifi.conf')
-	if auto_config_choice.lower() == "y":
-		os.system('sed -i \'s/auto_config=0/auto_config=1/\' /etc/raspiwifi/raspiwifi.conf')
-	if auto_config_delay != "":
-		os.system('sed -i \'s/auto_config_delay=300/auto_config_delay=' + auto_config_delay + '/\' /etc/raspiwifi/raspiwifi.conf')
+def update_main_config_file(ssl_enabled_choice, server_port_choice):
 	if ssl_enabled_choice.lower() == "y":
 		os.system('sed -i \'s/ssl_enabled=0/ssl_enabled=1/\' /etc/raspiwifi/raspiwifi.conf')
 	if server_port_choice != "":
